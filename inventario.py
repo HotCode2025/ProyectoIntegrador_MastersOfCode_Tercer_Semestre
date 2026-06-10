@@ -34,3 +34,42 @@ class Inventario(tk.Frame):
         self.scrollbar.pack(side="right", fill="y")
         self.canvas.pack(side="left", fill="both", expand=True)
 
+ #************************************************************************************************
+        #creamos el widget para buscar
+        lblframe_buscar = LabelFrame(self, text="Buscar", font="arial 14 bold", bg="#FFB7A6")
+        lblframe_buscar.place(x=10,y=10, width=280, height=80)
+
+        self.comboboxbuscar = ttk.Combobox(lblframe_buscar, font="Arial 12")
+        self.comboboxbuscar.place(x=5, y=5, width=260, height=40)
+
+    # ***********************************************************************************************
+        lblframe_seleccion = LabelFrame(self, text="Selección", font="arial 14 bold", bg="#FFB7A6")
+        lblframe_seleccion.place(x=10, y=95, width=280, height=190)
+
+        self.label1 = tk.Label(lblframe_seleccion, text="Artículo: ", font="arial 12", bg="#FFB7A6", wraplength=300)
+        self.label1.place(x=5, y=5)
+
+        self.label2 = tk.Label(lblframe_seleccion, text="Precio: ", font="arial 12", bg="#FFB7A6")
+        self.label2.place(x=5, y=40)
+
+        self.label3 = tk.Label(lblframe_seleccion, text="Costo: ", font="arial 12", bg="#FFB7A6")
+        self.label3.place(x=5, y=70)
+
+        self.label4 = tk.Label(lblframe_seleccion, text="Stock: ", font="arial 12", bg="#FFB7A6")
+        self.label4.place(x=5, y=100)
+
+        self.label5 = tk.Label(lblframe_seleccion, text="Estado: ", font="arial 12", bg="#FFB7A6")
+        self.label5.place(x=5, y=130)
+    #*************************************************************************************************
+
+        lblframe_botones = LabelFrame(self, bg="#FFB7A6", text="Opciones", font="arial 14 bold")
+        lblframe_botones.place(x=10, y=290, width=280, height=300)
+
+        btn1 = tk.Button(lblframe_botones, text="Agregar", font="arial 14 bold")
+        btn1.place(x=20, y=20, width=180, height=40)
+
+        btn2 = tk.Button(lblframe_botones, text="Editar", font="arial 14 bold")
+        btn2.place(x=20, y=80, width=180, height=40)
+
+
+
