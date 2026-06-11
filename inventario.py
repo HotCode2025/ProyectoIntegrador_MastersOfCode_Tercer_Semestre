@@ -1,6 +1,11 @@
 from tkinter import *
 import tkinter as tk
 from tkinter import ttk, messagebox, filedialog
+from PIL import Image, ImageTk
+import sys
+import os
+
+
 
 class Inventario(tk.Frame):
     
@@ -66,11 +71,44 @@ class Inventario(tk.Frame):
         lblframe_botones = LabelFrame(self, bg="#FFB7A6", text="Opciones", font="arial 14 bold")
         lblframe_botones.place(x=10, y=290, width=280, height=300)
 
-        btn1 = tk.Button(lblframe_botones, text="Agregar", font="arial 14 bold")
+        btn1 = tk.Button(lblframe_botones, text="Agregar", font="arial 14 bold", command=self.agregar_articulo)
         btn1.place(x=20, y=20, width=180, height=40)
 
         btn2 = tk.Button(lblframe_botones, text="Editar", font="arial 14 bold")
         btn2.place(x=20, y=80, width=180, height=40)
 
+    #************************************************************************************************
+
+    #Creamos una funcion para cargar las imagenes
+    def load_image(self):
+        file_path = filedialog.askopenfile()
+        if file_path :
+            image = Image.open(file_path)
+            image = image.resize((200,200)), Image.LANCZOS
+            image_name = os.path.basename(file_path)
+            image_save_path = os.path.join(self.image_folder, image_name)
+            image.save(image_save_path)
+            self.image_tk = ImageTk.PhotoImage(image)
+            self.product_image = self.image_tk
+            self.image_path = image_save_path
+
+            img_label = tk.Label(self.frameimg, image = self.image_tk)
+            img_label.place(x=0, y=0, width=200, height=200)
+
+    #creamos una funcion para cargar articulos
+    def agregar_articulo(self):
+        top= tk.Toplevel(self)
+        top.title("Agregar Articulo")
+        top.geometry("700x400+200+50")
+        top.config(bg="#FFE4E0")
+        top.resizable(False, False)
+        #este metodo bloquea para que el usuario no pueda tocar ninguna otra opcion que no este en la parte
+        #de agregar articulos hasta que se cierre
+        top.transient(self.master)
+        top.grab_set()
+        top.focus_set()
+        top.lift()
+
+        tk.Label(top, text="Articulos", font="arial 12 bold",bg="#FFE4E0").place(x=20,y=80,height=25)
 
 
