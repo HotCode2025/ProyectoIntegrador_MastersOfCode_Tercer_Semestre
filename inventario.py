@@ -15,6 +15,7 @@ class Inventario(tk.Frame):
         self.controlador = controlador
         self.widgets()
         self.articulos_combobox()
+        self.cargar_articulos()
         #aqui si no esta creada la carpeta fotos le pedimos al sistema que la cree
         self.image_folder = "fotos"
         if not os.path.exists(self.image_folder):
@@ -53,6 +54,7 @@ class Inventario(tk.Frame):
 
         self.comboboxbuscar = ttk.Combobox(lblframe_buscar, font="Arial 12")
         self.comboboxbuscar.place(x=5, y=5, width=260, height=40)
+        self.comboboxbuscar.bind("<<ComboboxSelected>>", self.on_combobox_select)
 
     # ***********************************************************************************************
         lblframe_seleccion = LabelFrame(self, text="Selección", font="arial 14 bold", bg="#FFB7A6")
@@ -186,4 +188,89 @@ class Inventario(tk.Frame):
         tk.Button(top,text="Guardar",font="arial 12 bold", command=guardar).place(x=50,y=260,width=150,height=40)
         tk.Button(top,text="Cancelar",font="arial 12 bold", command=top.destroy).place(x=260,y=260,width=150,height=40)
 
+    def cargar_articulos(self, filtro=None, categoria=None):
+        self.after(0, self._cargar_articulos, filtro, categoria)
 
+    def _cargar_articulos(self, filtro=None, categoria=None):
+        for widget in self.scrollable_frame.winfo_children():
+            widget.destroy()
+
+        query = "SELECT articulo, precio, image_path FROM articulos"
+        params = []
+
+        if filtro:
+            query += "WHERE articulo LIKE ?"
+            params.append(f'%{filtro}%')
+
+        self.cur.execute(query, params)
+        articulos = self.cur.fetchall()
+
+        self.row = 0
+        self.column = 0
+
+        for articulo, precio, image_path in articulos:
+            self.mostrar_articulo(articulo, precio, image_path)
+        
+    def mostrar_articulo(self, articulo, precio, image_path):
+        article_frame = tk.Frame(self.scrollable_frame, bg="white", relief="solid")
+        article_frame.grid(row=self.row, column=self.column, padx=10, pady=10)
+
+        if image_path and os.path.exists(image_path):
+            image = Image.open(image_path)
+            image = image.resize((150, 150), Image.LANCZOS)
+            imagen = ImageTk.PhotoImage(image)
+            image_label = tk.Label(article_frame, image=imagen)
+            image_label.image = imagen
+            image_label.pack(expand=True, fill="both")
+
+        name_label = tk.Label(article_frame, text=articulo, bg="white", anchor="w", wraplength=150, font="arial 10 bold")
+        name_label.pack(side="top", fill="x")
+
+        precio_label = tk.Label(article_frame, text=f"Precio: ${precio:.2f}", bg="white", anchor="w", wraplength=150, font="arial 8 bold")
+        precio_label.pack(side="bottom", fill="x")
+
+        #le indicamos que cada 4 productos va a cambiar de fila el producto mostrado
+        self.column += 1
+        if self.column > 3:
+            self.column = 0
+            self.row += 1
+
+
+
+    def on_combobox_select(self, event):
+        self.actualizar_label()
+
+    def actualizar_label(self, event=None):
+        articulo_seleccionado = self.comboboxbuscar.get()
+
+        try:
+            self.cur.execute("SELECT articulo, precio, costo, stock, estado FROM articulos WHERE articulo=?", (articulo_seleccionado,))
+            resultado = self.cur.fetchone()
+
+            if resultado is not None:
+                articulo, precio, costo, stock, estado = resultado
+
+                self.label1.config(text=f"Articulo: {articulo}")
+                self.label2.config(text=f"Precio: {precio}")
+                self.label3.config(text=f"Costo: {costo}")
+                self.label4.config(text=f"Stock: {stock}")
+                self.label5.config(text=f"Estado: {estado}")
+
+                if estado.lower() == "Activo":
+                    self.label5.config(fg="green")
+                elif estado.lower() == "Inactivo":
+                    self.label5.config(fg="red") 
+                else:
+                    self.label5.config(fg="black")
+            else:
+                self.label1.config(text="Articulo No Encontrado")
+                self.label2.config(text="Precio: N/A")
+                self.label3.config(text="Costo: N/A")
+                self.label4.config(text="Stock: N/A")
+                self.label5.config(text="Estado: N/A",fg="black")
+    
+
+
+        except sqlite3.Error as e:
+            print("Error al obtener los datos del articulo:", e)
+            messagebox.showerror("Error", "Error al obtener los datos del articulo")
