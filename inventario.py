@@ -3,6 +3,7 @@ from tkinter import *
 import tkinter as tk
 from tkinter import ttk, messagebox, filedialog
 from PIL import Image, ImageTk
+import threading
 import sys
 import os
 
@@ -16,6 +17,7 @@ class Inventario(tk.Frame):
         self.widgets()
         self.articulos_combobox()
         self.cargar_articulos()
+        self.timer_articulos = None
         #aqui si no esta creada la carpeta fotos le pedimos al sistema que la cree
         self.image_folder = "fotos"
         if not os.path.exists(self.image_folder):
@@ -55,6 +57,7 @@ class Inventario(tk.Frame):
         self.comboboxbuscar = ttk.Combobox(lblframe_buscar, font="Arial 12")
         self.comboboxbuscar.place(x=5, y=5, width=260, height=40)
         self.comboboxbuscar.bind("<<ComboboxSelected>>", self.on_combobox_select)
+        self.comboboxbuscar.bind("<KeyRelease>", self.filtrar_articulos)
 
     # ***********************************************************************************************
         lblframe_seleccion = LabelFrame(self, text="Selección", font="arial 14 bold", bg="#FFB7A6")
@@ -82,7 +85,7 @@ class Inventario(tk.Frame):
         btn1 = tk.Button(lblframe_botones, text="Agregar", font="arial 14 bold", command=self.agregar_articulo)
         btn1.place(x=20, y=20, width=180, height=40)
 
-        btn2 = tk.Button(lblframe_botones, text="Editar", font="arial 14 bold")
+        btn2 = tk.Button(lblframe_botones, text="Editar", font="arial 14 bold", command=self.editar_articulo)
         btn2.place(x=20, y=80, width=180, height=40)
 
     #************************************************************************************************
@@ -182,12 +185,14 @@ class Inventario(tk.Frame):
                 self.con.commit()
                 messagebox.showinfo("Exito","Articulo agregado exitosamente")
                 top.destroy()
+                self.cargar_articulos()
+                self.articulos_combobox()
             except sqlite3.Error as e:
                 print("Error al cargar el articulo:", e)
                 messagebox.showerror("Error", "Error al agregar el articulo")
         tk.Button(top,text="Guardar",font="arial 12 bold", command=guardar).place(x=50,y=260,width=150,height=40)
         tk.Button(top,text="Cancelar",font="arial 12 bold", command=top.destroy).place(x=260,y=260,width=150,height=40)
-
+    #creamos una funcion para cargar articulos
     def cargar_articulos(self, filtro=None, categoria=None):
         self.after(0, self._cargar_articulos, filtro, categoria)
 
@@ -199,7 +204,7 @@ class Inventario(tk.Frame):
         params = []
 
         if filtro:
-            query += "WHERE articulo LIKE ?"
+            query += " WHERE articulo LIKE ?"
             params.append(f'%{filtro}%')
 
         self.cur.execute(query, params)
@@ -256,9 +261,9 @@ class Inventario(tk.Frame):
                 self.label4.config(text=f"Stock: {stock}")
                 self.label5.config(text=f"Estado: {estado}")
 
-                if estado.lower() == "Activo":
+                if estado.lower() == "activo":
                     self.label5.config(fg="green")
-                elif estado.lower() == "Inactivo":
+                elif estado.lower() == "inactivo":
                     self.label5.config(fg="red") 
                 else:
                     self.label5.config(fg="black")
@@ -274,3 +279,129 @@ class Inventario(tk.Frame):
         except sqlite3.Error as e:
             print("Error al obtener los datos del articulo:", e)
             messagebox.showerror("Error", "Error al obtener los datos del articulo")
+
+    def filtrar_articulos(self, event):
+        if self.timer_articulos:
+            self.timer_articulos.cancel()
+        self.timer_articulos = threading.Timer(0.5, self._filter_articulos)
+        self.timer_articulos.start()
+
+    def _filter_articulos(self):
+        typed = self.comboboxbuscar.get()
+
+        if typed == '':
+            data = self.articulos
+        else:
+            data = [item for item in self.articulos if typed.lower() in item.lower()]
+
+        if data:
+            self.comboboxbuscar['values'] = data
+            self.comboboxbuscar.event_generate('<Down>')
+        else:
+            self.comboboxbuscar['values'] = ['No se encontraron resultados']
+            self.comboboxbuscar.event_generate('<Down>')
+
+        self.cargar_articulos(filtro=typed)
+
+    #creamos una funcion para editar los articulos ya cargados
+    def editar_articulo(self):
+        selected_item = self.comboboxbuscar.get()
+    
+        if not selected_item:
+            messagebox.showerror("Error", "Selecciona un articulo para editar")
+            return
+        
+        self.cur.execute("SELECT articulo, precio, costo, stock, estado, image_path FROM articulos WHERE articulo=?", (selected_item,))
+        resultado = self.cur.fetchone()
+
+        if not resultado:
+            messagebox.showerror("Error", "Articulo no encontrado")
+            return
+        
+        top = tk.Toplevel(self)
+        top.title("Editar Articulo")
+        top.geometry("700x400+200+50")
+        top.config(bg="#FFE4E0")
+        top.resizable(False, False)
+
+        top.transient(self.master)
+        top.grab_set()
+        top.focus_set()
+        top.lift()
+
+        (articulo, precio, costo, stock, estado, image_path) = resultado
+
+        tk.Label(top, text="Articulo: ", font="arial 12 bold", bg="#FF7E63").place(x=20, y=20, width=80, height=25)
+        entry_articulo = ttk.Entry(top, font="arial 12 bold")
+        entry_articulo.place(x=120, y=20, width=250, height=30)
+        entry_articulo.insert(0, articulo)
+
+        tk.Label(top, text="Precio: ", font="arial 12 bold", bg="#FF7E63").place(x=20, y=60, width=80, height=25)
+        entry_precio = ttk.Entry(top, font="arial 12 bold")
+        entry_precio.place(x=120, y=60, width=250, height=30)
+        entry_precio.insert(0, precio)
+
+        tk.Label(top, text="Costo: ", font="arial 12 bold", bg="#FF7E63").place(x=20, y=100, width=80, height=25)
+        entry_costo = ttk.Entry(top, font="arial 12 bold")
+        entry_costo.place(x=120, y=100, width=250, height=30)
+        entry_costo.insert(0, costo)
+
+        tk.Label(top, text="Stock: ", font="arial 12 bold", bg="#FF7E63").place(x=20, y=140, width=80, height=25)
+        entry_stock = ttk.Entry(top, font="arial 12 bold")
+        entry_stock.place(x=120, y=140, width=250, height=30)
+        entry_stock.insert(0, stock)
+
+        tk.Label(top, text="Estado: ", font="arial 12 bold", bg="#FF7E63").place(x=20, y=180, width=80, height=25)
+        entry_estado = ttk.Entry(top, font="arial 12 bold")
+        entry_estado.place(x=120, y=180, width=250, height=30)
+        entry_estado.insert(0, estado)    
+
+        self.frameimg = tk.Frame(top, bg="white", highlightbackground="gray", highlightthickness=1)
+        self.frameimg.place(x=440, y=30, width=200,height=200)
+
+        if image_path and os.path.exists(image_path):
+            image = Image.open(image_path)
+            image = image.resize((200, 200), Image.LANCZOS)
+            self.product_image = ImageTk.PhotoImage(image)
+            self.image_path = image_path
+            image_label = tk.Label(self.frameimg, image=self.product_image)
+            image_label.pack(expand=True, fill="both")
+
+        btnimagen = tk.Button(top, text="Cargar Imagen", font="arial 12 bold", command=self.load_image)
+        btnimagen.place(x=470, y=260, width=150, height=40)
+
+        def guardar():
+            nuevo_articulo = entry_articulo.get()
+            precio = entry_precio.get()
+            costo = entry_costo.get()
+            stock = entry_stock.get()
+            estado = entry_estado.get()
+
+            if not nuevo_articulo or not precio or not costo or not stock or not estado:
+                messagebox.showerror("Error", "Todos los campos deben ser completados")
+                return
+
+            try:
+                precio = float(precio)
+                costo = float(costo)
+                stock = int(stock)
+            except ValueError:
+                messagebox.showerror("Error", "Precio, costo y stock deben ser numeros validos")
+                return
+            if hasattr(self, 'image_path'):
+                image_path = self.image_path
+            else:
+                image_path = r"fotos/default.png"
+            
+            self.cur.execute("UPDATE articulos SET articulo=?, precio=?, costo=?, stock=?, image_path=?, estado=? WHERE articulo=?",
+                             (nuevo_articulo, precio, costo, stock, image_path, estado, selected_item))
+            self.con.commit()
+
+            self.articulos_combobox()
+            self.after(0, lambda: self.cargar_articulos(filtro=nuevo_articulo))
+
+            top.destroy()
+            messagebox.showinfo("exito","Articulo editado correctamente")
+
+        btn_guardar = tk.Button(top, text="Guardar", font="arial 12 bold", command=guardar)
+        btn_guardar.place(x=260,y=260,width=150,height=40)
