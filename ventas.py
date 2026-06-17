@@ -1,9 +1,17 @@
 import sqlite3
+#importamos tkinter para la interfaz grafica de nuestra app de inventarios
 from tkinter import *
 import tkinter as tk
 from tkinter import ttk, messagebox, simpledialog
 import datetime
 import threading
+#exportamos la libreria de reportlab para las facturas generadas en pdf
+from reportlab.lib.pagesizes import letter
+from reportlab.lib import colors
+from reportlab.lib.units import inch
+from reportlab.pdfgen import canvas
+import sys
+import os
 
 ##Fuentes a usadas
 ## #FF7E63 oscuro
@@ -208,6 +216,9 @@ class Ventas(tk.Frame):
                     (factura, cliente, producto, precio, cantidad, total.replace("", "").replace(","," "), costo * cantidad, fecha_actual, hora_actual))
                 c.execute("UPDATE articulos SET stock = stock - ? WHERE articulo = ?", (cantidad, producto))
             conn.commit()
+
+            self.generar_factura_pdf(total_venta,cliente)
+
         except sqlite3.Error as e:
             messagebox.showerror("Error", f"Error al registrar la venta: {e}")
 
@@ -401,6 +412,104 @@ class Ventas(tk.Frame):
         except sqlite3.Error as e:
             messagebox.showerror("Error", f"Error al obtener las ventas: {e}")
             
+    def generar_factura_pdf(self, total_venta, cliente):
+        try:
+            factura_path = f"facturas/Factura_{self.numero_factura}.pdf"
+            c = canvas.Canvas(factura_path, pagesize=letter)
+            
+            empresa_nombre = "Mercadito Bombal V1.0"
+            empresa_direccion = "Bombal 246, M5560 Tunuyán, Mendoza"
+            empresa_telefono = "+54 2622 560366"
+            empresa_email = "mercaditobombal12@gmail.com"
+            empresa_website = "PROXIMAMENTE"
+            
+            c.setFont("Helvetica-Bold", 18)
+            c.setFillColor(colors.darkblue)
+            c.drawCentredString(300, 750, "Factura de MercaditoBombal")
+            
+            c.setFillColor(colors.black)
+            c.setFont("Helvetica-Bold", 12)
+            c.drawString(50, 710, f"{empresa_nombre}")
+            c.setFont("Helvetica", 12)
+            c.drawString(50, 690, f"Dirección: {empresa_direccion}")
+            c.drawString(50, 670, f"Teléfono: {empresa_telefono}")
+            c.drawString(50, 650, f"Email: {empresa_email}")
+            c.drawString(50, 630, f"Website: {empresa_website}")
+
+            c.setLineWidth(0.5)
+            c.setStrokeColor(colors.gray)
+            c.line(50, 620, 550, 620)
+
+            c.setFont("Helvetica", 12)
+            c.drawString(50, 600, f"Número de factura: {self.numero_factura}")
+            c.drawString(50, 580, f"Fecha: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+            
+            c.line(50,560,550,560)
+
+            c.drawString(50, 540, f"Cliente: {cliente}")
+            c.drawString(50, 520, "Descripción de productos:")
+
+            y_offset = 500
+            c.setFont("Helvetica-Bold", 12)
+            c.drawString(70, y_offset, "Producto")
+            c.drawString(270, y_offset, "Cantidad")
+            c.drawString(370, y_offset, "Precio")
+            c.drawString(470, y_offset, "Total")
+
+            c.line(50, y_offset - 10, 550, y_offset - 10)
+            y_offset -= 30
+            c.setFont("Helvetica", 12)
+            for item in self.productos_seleccionados:
+                factura, cliente, producto, precio, cantidad, total, costo = item
+                c.drawString(70, y_offset, producto)
+                c.drawString(270, y_offset, str(cantidad))
+                c.drawString(370, y_offset, "${:,.0f}".format(precio))
+                c.drawString(470, y_offset, total)
+                y_offset -= 20
+
+            c.line(50, y_offset, 550, y_offset)
+            y_offset -= 20
+
+            c.setFont("Helvetica-Bold", 14)
+            c.setFillColor(colors.green)
+            c.drawString(50, y_offset, f"Total a Pagar: $ {total_venta:,.0f}")
+            c.setFillColor(colors.black)
+            c.setFont("Helvetica", 12)  
+
+            y_offset -= 20
+            c.line(50, y_offset, 550, y_offset)
+
+            c.setFont("Helvetica-Bold", 16)
+            c.drawString(150, y_offset - 60, "¡Gracias por tu compra, volvé pronto!")
+
+            y_offset -= 100
+            c.setFont("Helvetica", 10)
+
+
+            c.drawString(50, y_offset, "Términos y Condiciones:")
+
+
+            y_offset -= 20
+            c.drawString(50, y_offset, "1. Los productos una vez manipulados no tienen devolucion.")
+
+
+            y_offset -= 20
+            c.drawString(50, y_offset, "2. Conserve el comprobante de su compra.")
+
+
+            y_offset -= 20
+            c.drawString(50, y_offset, "DOCUMENTO NO VALIDO COMO FACTURA")
+
+            c.save()
+
+            messagebox.showinfo("Factura creada", f"Se genero la factura en: {factura_path}")
+
+            os.startfile(os.path.abspath(factura_path))
+
+        except Exception as e:
+            messagebox.showerror("Error", f"No se pudo generar la factura: {e}")
+
+
 
     def widgets(self):
         labelframe = tk.LabelFrame(self, font="sans 12 bold", bg="#FFB7A6")
