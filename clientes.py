@@ -1,13 +1,15 @@
+import sqlite3
 from tkinter import *
 import tkinter as tk
 from tkinter import ttk, messagebox
 
 class Clientes(tk.Frame):
-    
+    db_name = "database.db"
     def __init__(self, padre, controlador):
         super().__init__(padre)
         self.controlador = controlador
         self.widgets()
+        self.cargar_registros()
         
     def widgets(self):
         self.labelframe = tk.LabelFrame(self, text="Clientes", font="sans 20 bold", bg="#FFE4E0")
@@ -39,10 +41,10 @@ class Clientes(tk.Frame):
         self.correo.place(x=10, y=370, width=220, height=40)
 
 
-        btn1 = Button(self.labelframe, fg="Black", text="Ingresar", font="sans 16 bold")
+        btn1 = tk.Button(self.labelframe, fg="Black", text="Ingresar", font="sans 16 bold", command=self.registrar)
         btn1.place(x=10, y=420, width=220, height=40)
 
-        btn2 = Button(self.labelframe, fg="Black", text="Modificar", font="sans 16 bold")
+        btn2 = tk.Button(self.labelframe, fg="Black", text="Modificar", font="sans 16 bold", command=self.modificar)
         btn2.place(x=10, y=470, width=220, height=40)
 
 
@@ -76,4 +78,138 @@ class Clientes(tk.Frame):
         self.tre.column("Celular", width=120, anchor="center")
         self.tre.column("Dirección", width=200, anchor="center")
         self.tre.column("Correo", width=200, anchor="center")
+
+    def validar_campos(self):
+        if not self.nombre.get() or not self.dni.get() or not self.celular.get() or not self.direccion.get() or not self.correo.get():
+            messagebox.showerror("Error","Todos los campos deben ser completados")
+            return False
+        return True
+    
+    def registrar(self):
+        if not self.validar_campos():
+            return
+
+        nombre = self.nombre.get()
+        dni = self.dni.get()
+        celular = self.celular.get()
+        direccion = self.direccion.get()
+        correo = self.correo.get()
+
+        try:
+            conn = sqlite3.connect(self.db_name)
+            cursor = conn.cursor()
+            cursor.execute("INSERT INTO clientes (nombre, dni, celular, direccion, correo) VALUES (?, ?, ?, ?, ?)",
+                           (nombre, dni, celular, direccion, correo))
+            conn.commit()
+            conn.close()
+            messagebox.showinfo("Exito","Cliente registrado")
+            self.limpiar_treeview()
+            self.limpiar_campos()
+            self.cargar_registros()
+
+        except sqlite3.Error as e:
+            messagebox.showerror("Error", f"No se pudo registrar el cliente: {e}")
+
+
+        
+    def cargar_registros(self):
+        try:
+            conn = sqlite3.connect(self.db_name)
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM clientes")
+            rows = cursor.fetchall()
+            for row in rows:
+                self.tre.insert("", "end", values=row)
+            conn.close()
+        except sqlite3.Error as e:
+            messagebox.showerror("Error", f"No se pudo cargar los registros: {e}")
+
+    
+    def limpiar_treeview(self):
+        for item in self.tre.get_children():
+            self.tre.delete(item)
+
+    def limpiar_campos(self):
+        self.nombre.delete(0, END)
+        self.dni.delete(0, END)
+        self.celular.delete(0, END)
+        self.direccion.delete(0, END)
+        self.correo.delete(0, END)
+
+    def modificar(self):
+        if not self.tre.selection():
+            messagebox.showerror("Error", "Porfavor seleccione un cliente para modificar.")
+            return
+
+        item = self.tre.selection()[0]
+        id_cliente = self.tre.item(item, "values")[0]
+
+        nombre_actual = self.tre.item(item, "values")[1]
+        dni_actual = self.tre.item(item, "values")[2]
+        celular_actual = self.tre.item(item, "values")[3]
+        direccion_actual = self.tre.item(item, "values")[4]
+        correo_actual = self.tre.item(item, "values")[5]
+
+        top_modificar = Toplevel(self)
+        top_modificar.title("Modificar cliente")
+        top_modificar.geometry("400x400+400+50")
+        top_modificar.config(bg="#FF7E63")
+        top_modificar.resizable(False, False)
+        top_modificar.transient(self.master)
+        top_modificar.grab_set()
+        top_modificar.focus_set()
+        top_modificar.lift()
+
+
+        tk.Label(top_modificar, text="Nombre: ", font="sans 14 bold", bg="#FF7E63").grid(row=0, column=0, padx=10,  pady=5)
+        nombre_nuevo = tk.Entry(top_modificar, font="sans 14 bold")
+        nombre_nuevo.insert(0, nombre_actual)
+        nombre_nuevo.grid(row=0, column=1, padx=10, pady=5)
+
+        tk.Label(top_modificar, text="DNI: ", font="sans 14 bold", bg="#FF7E63").grid(row=1, column=0, padx=10, pady=5)
+        dni_nuevo = tk.Entry(top_modificar, font="sans 14 bold")
+        dni_nuevo.insert(0, dni_actual)
+        dni_nuevo.grid(row=1, column=1, padx=10, pady=5)
+
+        tk.Label(top_modificar, text="Celular: ", font="sans 14 bold", bg="#FF7E63").grid(row=2, column=0, padx=10, pady=5)
+        celular_nuevo = tk.Entry(top_modificar, font="sans 14 bold")
+        celular_nuevo.insert(0, celular_actual)
+        celular_nuevo.grid(row=2, column=1, padx=10, pady=5)
+
+        tk.Label(top_modificar, text="Direccion: ", font="sans 14 bold", bg="#FF7E63").grid(row=3, column=0, padx=10, pady=5)
+        direccion_nuevo = tk.Entry(top_modificar, font="sans 14 bold")
+        direccion_nuevo.insert(0, direccion_actual)
+        direccion_nuevo.grid(row=3, column=1, padx=10, pady=5)
+
+        tk.Label(top_modificar, text="Correo: ", font="sans 14 bold", bg="#FF7E63").grid(row=4, column=0, padx=10, pady=5)
+        correo_nuevo = tk.Entry(top_modificar, font="sans 14 bold")
+        correo_nuevo.insert(0, correo_actual)
+        correo_nuevo.grid(row=4, column=1, padx=10, pady=5)
+
+        btn_guardar = tk.Button(top_modificar, text="Guardar cambios", command=lambda: self.guardar_modificaciones(nombre_nuevo, dni_nuevo, celular_nuevo, direccion_nuevo, correo_nuevo, id_cliente, top_modificar), font="sans 14 bold")
+        btn_guardar.grid(row=5, column=0, columnspan=2, pady=20)
+
+
+    def guardar_modificaciones(self, nombre_nuevo, dni_nuevo, celular_nuevo, direccion_nuevo, correo_nuevo, id_cliente, top_modificar):
+        nuevo_nombre = nombre_nuevo.get()
+        nuevo_dni = dni_nuevo.get()
+        nuevo_celular = celular_nuevo.get()
+        nueva_direccion = direccion_nuevo.get()
+        nuevo_correo = correo_nuevo.get()
+        try:
+            conn = sqlite3.connect(self.db_name)
+            cursor = conn.cursor()
+            cursor.execute("""UPDATE clientes SET nombre = ?, dni = ?, celular = ?, direccion = ?, correo = ? WHERE id = ?""",
+                            (nuevo_nombre, nuevo_dni, nuevo_celular, nueva_direccion, nuevo_correo, id_cliente))
+            conn.commit()
+            conn.close()
+            messagebox.showinfo("Exito", "Cliente modificado correctamente.")
+            self.limpiar_treeview()
+            self.cargar_registros()
+            top_modificar.destroy()
+        except sqlite3.Error as e:
+            messagebox.showerror("Error", f"No se pudo modificar el cliente: {e}")
+
+
+            
 

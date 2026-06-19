@@ -3,9 +3,6 @@ import tkinter as tk
 from ventas import Ventas
 from inventario import Inventario
 from clientes import Clientes
-from pedidos import Pedidos
-from proveedor import Proveedor
-from informacion import Informacion
 import sys
 import os
 
@@ -18,7 +15,7 @@ class Container(tk.Frame):
         self.widgets()
         self.frames = {}
         self.buttons = []
-        for i in (Ventas, Inventario, Clientes, Pedidos, Proveedor, Informacion):
+        for i in (Ventas, Inventario, Clientes):
             frame = i(self, controlador)
             self.frames[i] = frame
             frame.pack()
@@ -41,16 +38,6 @@ class Container(tk.Frame):
     def clientes (self):
         self.show_frames(Clientes)
 
-    def pedidos(self):
-        self.show_frames(Pedidos)
-
-    def proveedor(self):
-        self.show_frames(Proveedor)
-
-    def informacion(self):
-        self.show_frames(Informacion)
-
-
 
     def widgets(self):
         frame2 = tk.Frame(self)
@@ -65,13 +52,5 @@ class Container(tk.Frame):
         self.btn_clientes = Button(frame2, fg="black", text="Clientes", font="sans 16 bold", command=self.clientes)
         self.btn_clientes.place(x=369, y=0, width=184, height=40)
 
-        self.btn_pedidos = Button(frame2, fg="black", text="Pedidos", font="sans 16 bold", command=self.pedidos)
-        self.btn_pedidos.place(x=554, y=0, width=184, height=40)
 
-        self.btn_proveedor = Button(frame2, fg="black", text="Proveedor", font="sans 16 bold", command=self.proveedor)
-        self.btn_proveedor.place(x=739, y=0, width=184, height=40)
-
-        self.btn_informacion = Button(frame2, fg="black", text="Informacion", font="sans 16 bold", command=self.informacion)
-        self.btn_informacion.place(x=923, y=0, width=184, height=40)
-
-        self.buttons = [self.btn_ventas, self.btn_inventario, self.btn_clientes, self.btn_pedidos, self.btn_proveedor, self.btn_informacion]
+        self.buttons = [self.btn_ventas, self.btn_inventario, self.btn_clientes]
